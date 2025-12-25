@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,6 +18,7 @@ const (
 	ModeEdit
 	ModeHelp
 	ModeError
+	ModeConfirmQuit
 )
 
 // Tab represents the active tab
@@ -50,8 +53,8 @@ type Model struct {
 	inputs       []textinput.Model
 
 	// Messages
-	err  error
-	info string
+	err    error
+	status string
 
 	// File path (if loaded from command line)
 	filePath string
@@ -169,4 +172,23 @@ func (m *Model) initPolygonEditInputs(polygon parser.PolygonType) {
 
 	m.inputs = inputs
 	m.focusedField = 0
+}
+
+// saveFile saves the current TYPFile to disk
+func (m *Model) saveFile() error {
+	if m.typFile == nil {
+		return fmt.Errorf("no file loaded")
+	}
+
+	if m.filePath == "" {
+		return fmt.Errorf("no file path")
+	}
+
+	if err := parser.WriteFile(m.typFile, m.filePath); err != nil {
+		return err
+	}
+
+	m.modified = false
+	m.status = "File saved successfully"
+	return nil
 }

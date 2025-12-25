@@ -53,6 +53,8 @@ func (m Model) View() string {
 		return m.viewDetail()
 	case ModeEdit:
 		return m.viewEdit()
+	case ModeConfirmQuit:
+		return m.viewConfirmQuit()
 	default:
 		return m.viewList()
 	}
@@ -81,6 +83,7 @@ func (m Model) viewHelp() string {
 	b.WriteString("List View:\n")
 	b.WriteString("  q, Ctrl+C    Quit\n")
 	b.WriteString("  ?            Toggle help\n")
+	b.WriteString("  Ctrl+S       Save file to disk\n")
 	b.WriteString("  Tab          Switch between tabs (Points/Lines/Polygons)\n")
 	b.WriteString("  ↑/k          Move up\n")
 	b.WriteString("  ↓/j          Move down\n")
@@ -88,10 +91,11 @@ func (m Model) viewHelp() string {
 	b.WriteString("\n")
 	b.WriteString("Detail View:\n")
 	b.WriteString("  e            Edit selected item\n")
+	b.WriteString("  Ctrl+S       Save file to disk\n")
 	b.WriteString("  Esc          Return to list view\n")
 	b.WriteString("\n")
 	b.WriteString("Edit Mode:\n")
-	b.WriteString("  Ctrl+S       Save changes\n")
+	b.WriteString("  Ctrl+S       Save changes to item and return to detail\n")
 	b.WriteString("  Esc          Cancel editing\n")
 	b.WriteString("  Tab/↑/↓      Navigate between fields\n")
 	b.WriteString("\n")
@@ -229,7 +233,15 @@ func (m Model) renderContent() string {
 
 // renderFooter renders the footer with help text
 func (m Model) renderFooter() string {
-	return helpStyle.Render("[Tab] Switch  [↑/↓] Navigate  [Enter] Details  [?] Help  [q] Quit")
+	footer := "[Tab] Switch  [↑/↓] Navigate  [Enter] Details  [Ctrl+S] Save  [?] Help  [q] Quit"
+
+	// Show status message if present
+	if m.status != "" {
+		statusMsg := statusStyle.Render(m.status)
+		return statusMsg + "\n" + helpStyle.Render(footer)
+	}
+
+	return helpStyle.Render(footer)
 }
 
 // viewDetail renders the detail view for a selected item
@@ -310,6 +322,20 @@ func (m Model) viewEdit() string {
 
 	b.WriteString("\n\n")
 	b.WriteString(helpStyle.Render("[Ctrl+S] Save  [Esc] Cancel  [Tab/↑/↓] Navigate fields"))
+
+	return b.String()
+}
+
+// viewConfirmQuit renders the confirmation dialog for quitting with unsaved changes
+func (m Model) viewConfirmQuit() string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("Unsaved Changes"))
+	b.WriteString("\n\n")
+	b.WriteString("You have unsaved changes. What would you like to do?\n\n")
+	b.WriteString("  [Y] Save and quit\n")
+	b.WriteString("  [N] Quit without saving\n")
+	b.WriteString("  [Esc/C] Cancel and return\n")
 
 	return b.String()
 }

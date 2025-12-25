@@ -1,4 +1,3 @@
-; Basic TYP file with point, line, and polygon
 [_id]
 CodePage=1252
 FID=1234
@@ -10,8 +9,8 @@ Type=0x2f06
 String=0x04,Bank
 String=0x01,Banque
 DayXpm="8 8 2 1"
-"! c #778899"
 "  c none"
+"! c #778899"
 "!!!!!!!!"
 "!      !"
 "! $$$$ !"
@@ -24,7 +23,7 @@ DayXpm="8 8 2 1"
 
 [_line]
 Type=0x01
-String=0x04,Highway
+String=0x04,Autópálya
 LineWidth=5
 BorderWidth=1
 Xpm="0 0 2 0"
@@ -37,8 +36,8 @@ Type=0x13
 String=0x04,Park
 ExtendedLabels=Y
 Xpm="32 32 2 1"
-"a c #90EE90"
 "b c none"
+"a c #90EE90"
 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 "abbbbbbbbbbbbbbbbbbbbbbbbbbbbba"
 "abaaaaaaaaaaaaaaaaaaaaaaaaaaaba"
@@ -72,3 +71,4 @@ Xpm="32 32 2 1"
 "abbbbbbbbbbbbbbbbbbbbbbbbbbbbba"
 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 [end]
+

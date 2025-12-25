@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -35,10 +37,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleKeyPress handles keyboard input
 func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle confirm quit mode separately
+	if m.mode == ModeConfirmQuit {
+		return m.handleConfirmQuit(msg)
+	}
+
+	// Clear status message on any key press
+	m.status = ""
+
 	switch msg.String() {
 	case "q", "ctrl+c":
-		// TODO: Check for unsaved changes
+		// Check for unsaved changes
+		if m.modified {
+			m.mode = ModeConfirmQuit
+			return m, nil
+		}
 		return m, tea.Quit
+
+	case "ctrl+s":
+		// Save file in list or detail mode
+		if (m.mode == ModeList || m.mode == ModeDetail) && m.typFile != nil {
+			if err := m.saveFile(); err != nil {
+				m.status = fmt.Sprintf("Error saving: %v", err)
+			}
+		}
+		return m, nil
 
 	case "?":
 		if m.mode == ModeHelp {
@@ -107,16 +130,6 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.initPolygonEditInputs(m.typFile.Polygons[m.selectedIdx])
 				}
 			}
-		}
-		return m, nil
-
-	case "ctrl+s":
-		if m.mode == ModeEdit {
-			// Save changes
-			m.saveEdits()
-			m.modified = true
-			m.mode = ModeDetail
-			m.inputs = nil
 		}
 		return m, nil
 	}
@@ -232,4 +245,29 @@ func (m *Model) saveEdits() {
 			m.typFile.Polygons[m.selectedIdx].Labels["0x04"] = labelValue
 		}
 	}
+}
+
+// handleConfirmQuit handles the confirm quit dialog
+func (m Model) handleConfirmQuit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "Y":
+		// Save and quit
+		if err := m.saveFile(); err != nil {
+			m.status = fmt.Sprintf("Error saving: %v", err)
+			m.mode = ModeList
+			return m, nil
+		}
+		return m, tea.Quit
+
+	case "n", "N":
+		// Quit without saving
+		return m, tea.Quit
+
+	case "esc", "c", "C":
+		// Cancel quit and return to list
+		m.mode = ModeList
+		return m, nil
+	}
+
+	return m, nil
 }
