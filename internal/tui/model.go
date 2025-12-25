@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dyuri/typtui/internal/parser"
 )
@@ -44,6 +45,10 @@ type Model struct {
 	// Components
 	list list.Model
 
+	// Edit mode state
+	focusedField int
+	inputs       []textinput.Model
+
 	// Messages
 	err  error
 	info string
@@ -83,4 +88,85 @@ func loadFileCmd(filePath string) tea.Cmd {
 		typFile, err := parser.ParseFile(filePath)
 		return fileLoadedMsg{typFile: typFile, err: err}
 	}
+}
+
+// initPointEditInputs initializes text inputs for editing a point type
+func (m *Model) initPointEditInputs(point parser.PointType) {
+	inputs := make([]textinput.Model, 2)
+
+	// Type field
+	inputs[0] = textinput.New()
+	inputs[0].Placeholder = "e.g., 0x2f06"
+	inputs[0].Focus()
+	inputs[0].CharLimit = 10
+	inputs[0].Width = 30
+	inputs[0].SetValue(point.Type)
+	inputs[0].Prompt = "Type: "
+
+	// English label field (0x04)
+	inputs[1] = textinput.New()
+	inputs[1].Placeholder = "Label"
+	inputs[1].CharLimit = 50
+	inputs[1].Width = 50
+	if label, ok := point.Labels["0x04"]; ok {
+		inputs[1].SetValue(label)
+	}
+	inputs[1].Prompt = "Label (EN): "
+
+	m.inputs = inputs
+	m.focusedField = 0
+}
+
+// initLineEditInputs initializes text inputs for editing a line type
+func (m *Model) initLineEditInputs(line parser.LineType) {
+	inputs := make([]textinput.Model, 2)
+
+	// Type field
+	inputs[0] = textinput.New()
+	inputs[0].Placeholder = "e.g., 0x01"
+	inputs[0].Focus()
+	inputs[0].CharLimit = 10
+	inputs[0].Width = 30
+	inputs[0].SetValue(line.Type)
+	inputs[0].Prompt = "Type: "
+
+	// English label field
+	inputs[1] = textinput.New()
+	inputs[1].Placeholder = "Label"
+	inputs[1].CharLimit = 50
+	inputs[1].Width = 50
+	if label, ok := line.Labels["0x04"]; ok {
+		inputs[1].SetValue(label)
+	}
+	inputs[1].Prompt = "Label (EN): "
+
+	m.inputs = inputs
+	m.focusedField = 0
+}
+
+// initPolygonEditInputs initializes text inputs for editing a polygon type
+func (m *Model) initPolygonEditInputs(polygon parser.PolygonType) {
+	inputs := make([]textinput.Model, 2)
+
+	// Type field
+	inputs[0] = textinput.New()
+	inputs[0].Placeholder = "e.g., 0x13"
+	inputs[0].Focus()
+	inputs[0].CharLimit = 10
+	inputs[0].Width = 30
+	inputs[0].SetValue(polygon.Type)
+	inputs[0].Prompt = "Type: "
+
+	// English label field
+	inputs[1] = textinput.New()
+	inputs[1].Placeholder = "Label"
+	inputs[1].CharLimit = 50
+	inputs[1].Width = 50
+	if label, ok := polygon.Labels["0x04"]; ok {
+		inputs[1].SetValue(label)
+	}
+	inputs[1].Prompt = "Label (EN): "
+
+	m.inputs = inputs
+	m.focusedField = 0
 }

@@ -51,6 +51,8 @@ func (m Model) View() string {
 		return m.viewHelp()
 	case ModeDetail:
 		return m.viewDetail()
+	case ModeEdit:
+		return m.viewEdit()
 	default:
 		return m.viewList()
 	}
@@ -76,13 +78,22 @@ func (m Model) viewHelp() string {
 	b.WriteString(titleStyle.Render("typtui - Help"))
 	b.WriteString("\n\n")
 	b.WriteString("Keyboard Shortcuts:\n\n")
+	b.WriteString("List View:\n")
 	b.WriteString("  q, Ctrl+C    Quit\n")
 	b.WriteString("  ?            Toggle help\n")
 	b.WriteString("  Tab          Switch between tabs (Points/Lines/Polygons)\n")
 	b.WriteString("  ↑/k          Move up\n")
 	b.WriteString("  ↓/j          Move down\n")
 	b.WriteString("  Enter        View details of selected item\n")
+	b.WriteString("\n")
+	b.WriteString("Detail View:\n")
+	b.WriteString("  e            Edit selected item\n")
 	b.WriteString("  Esc          Return to list view\n")
+	b.WriteString("\n")
+	b.WriteString("Edit Mode:\n")
+	b.WriteString("  Ctrl+S       Save changes\n")
+	b.WriteString("  Esc          Cancel editing\n")
+	b.WriteString("  Tab/↑/↓      Navigate between fields\n")
 	b.WriteString("\n")
 	b.WriteString(helpStyle.Render("Press ? to return to the main view"))
 
@@ -254,7 +265,51 @@ func (m Model) viewDetail() string {
 	}
 
 	b.WriteString("\n\n")
-	b.WriteString(helpStyle.Render("[Esc] Back  [?] Help  [q] Quit"))
+	b.WriteString(helpStyle.Render("[e] Edit  [Esc] Back  [?] Help  [q] Quit"))
+
+	return b.String()
+}
+
+// viewEdit renders the edit form for the selected item
+func (m Model) viewEdit() string {
+	if m.typFile == nil {
+		return "No file loaded"
+	}
+
+	var b strings.Builder
+
+	// Header
+	b.WriteString(m.renderHeader())
+	b.WriteString("\n\n")
+
+	// Tabs
+	b.WriteString(m.renderTabs())
+	b.WriteString("\n\n")
+
+	// Edit form title
+	var itemType string
+	switch m.activeTab {
+	case TabPoints:
+		itemType = "Point"
+	case TabLines:
+		itemType = "Line"
+	case TabPolygons:
+		itemType = "Polygon"
+	}
+	b.WriteString(titleStyle.Render(fmt.Sprintf("Edit %s", itemType)))
+	b.WriteString("\n\n")
+
+	// Render form fields
+	for i, input := range m.inputs {
+		b.WriteString(input.View())
+		b.WriteString("\n")
+		if i < len(m.inputs)-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	b.WriteString("\n\n")
+	b.WriteString(helpStyle.Render("[Ctrl+S] Save  [Esc] Cancel  [Tab/↑/↓] Navigate fields"))
 
 	return b.String()
 }
