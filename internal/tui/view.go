@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/dyuri/typtui/internal/parser"
 )
 
 var (
@@ -48,6 +49,8 @@ func (m Model) View() string {
 		return m.viewError()
 	case ModeHelp:
 		return m.viewHelp()
+	case ModeDetail:
+		return m.viewDetail()
 	default:
 		return m.viewList()
 	}
@@ -78,6 +81,8 @@ func (m Model) viewHelp() string {
 	b.WriteString("  Tab          Switch between tabs (Points/Lines/Polygons)\n")
 	b.WriteString("  ↑/k          Move up\n")
 	b.WriteString("  ↓/j          Move down\n")
+	b.WriteString("  Enter        View details of selected item\n")
+	b.WriteString("  Esc          Return to list view\n")
 	b.WriteString("\n")
 	b.WriteString(helpStyle.Render("Press ? to return to the main view"))
 
@@ -213,5 +218,250 @@ func (m Model) renderContent() string {
 
 // renderFooter renders the footer with help text
 func (m Model) renderFooter() string {
-	return helpStyle.Render("[Tab] Switch  [↑/↓] Navigate  [?] Help  [q] Quit")
+	return helpStyle.Render("[Tab] Switch  [↑/↓] Navigate  [Enter] Details  [?] Help  [q] Quit")
+}
+
+// viewDetail renders the detail view for a selected item
+func (m Model) viewDetail() string {
+	if m.typFile == nil {
+		return "No file loaded"
+	}
+
+	var b strings.Builder
+
+	// Header
+	b.WriteString(m.renderHeader())
+	b.WriteString("\n\n")
+
+	// Tabs
+	b.WriteString(m.renderTabs())
+	b.WriteString("\n\n")
+
+	// Detail content based on active tab
+	switch m.activeTab {
+	case TabPoints:
+		if m.selectedIdx < len(m.typFile.Points) {
+			b.WriteString(m.renderPointDetail(m.typFile.Points[m.selectedIdx]))
+		}
+	case TabLines:
+		if m.selectedIdx < len(m.typFile.Lines) {
+			b.WriteString(m.renderLineDetail(m.typFile.Lines[m.selectedIdx]))
+		}
+	case TabPolygons:
+		if m.selectedIdx < len(m.typFile.Polygons) {
+			b.WriteString(m.renderPolygonDetail(m.typFile.Polygons[m.selectedIdx]))
+		}
+	}
+
+	b.WriteString("\n\n")
+	b.WriteString(helpStyle.Render("[Esc] Back  [?] Help  [q] Quit"))
+
+	return b.String()
+}
+
+// renderPointDetail renders the details of a point type
+func (m Model) renderPointDetail(point parser.PointType) string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("Point Details"))
+	b.WriteString("\n\n")
+
+	// Type
+	b.WriteString(selectedStyle.Render("Type: "))
+	b.WriteString(point.Type)
+	b.WriteString("\n\n")
+
+	// Labels
+	if len(point.Labels) > 0 {
+		b.WriteString(selectedStyle.Render("Labels:"))
+		b.WriteString("\n")
+		for code, label := range point.Labels {
+			langName := getLanguageName(code)
+			b.WriteString(fmt.Sprintf("  %s (%s): %s\n", code, langName, label))
+		}
+		b.WriteString("\n")
+	}
+
+	// DayXpm
+	if point.DayXpm != nil {
+		b.WriteString(selectedStyle.Render("Day Icon:"))
+		b.WriteString("\n")
+		b.WriteString(m.renderXPMInfo(point.DayXpm))
+		b.WriteString("\n")
+	}
+
+	// NightXpm
+	if point.NightXpm != nil {
+		b.WriteString(selectedStyle.Render("Night Icon:"))
+		b.WriteString("\n")
+		b.WriteString(m.renderXPMInfo(point.NightXpm))
+		b.WriteString("\n")
+	}
+
+	return b.String()
+}
+
+// renderLineDetail renders the details of a line type
+func (m Model) renderLineDetail(line parser.LineType) string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("Line Details"))
+	b.WriteString("\n\n")
+
+	// Type
+	b.WriteString(selectedStyle.Render("Type: "))
+	b.WriteString(line.Type)
+	b.WriteString("\n\n")
+
+	// Labels
+	if len(line.Labels) > 0 {
+		b.WriteString(selectedStyle.Render("Labels:"))
+		b.WriteString("\n")
+		for code, label := range line.Labels {
+			langName := getLanguageName(code)
+			b.WriteString(fmt.Sprintf("  %s (%s): %s\n", code, langName, label))
+		}
+		b.WriteString("\n")
+	}
+
+	// Line properties
+	if line.LineWidth > 0 {
+		b.WriteString(fmt.Sprintf("Line Width: %d\n", line.LineWidth))
+	}
+	if line.BorderWidth > 0 {
+		b.WriteString(fmt.Sprintf("Border Width: %d\n", line.BorderWidth))
+	}
+	if line.LineStyle != "" {
+		b.WriteString(fmt.Sprintf("Line Style: %s\n", line.LineStyle))
+	}
+	b.WriteString("\n")
+
+	// DayXpm
+	if line.DayXpm != nil {
+		b.WriteString(selectedStyle.Render("Day Pattern:"))
+		b.WriteString("\n")
+		b.WriteString(m.renderXPMInfo(line.DayXpm))
+		b.WriteString("\n")
+	}
+
+	// NightXpm
+	if line.NightXpm != nil {
+		b.WriteString(selectedStyle.Render("Night Pattern:"))
+		b.WriteString("\n")
+		b.WriteString(m.renderXPMInfo(line.NightXpm))
+		b.WriteString("\n")
+	}
+
+	return b.String()
+}
+
+// renderPolygonDetail renders the details of a polygon type
+func (m Model) renderPolygonDetail(polygon parser.PolygonType) string {
+	var b strings.Builder
+
+	b.WriteString(titleStyle.Render("Polygon Details"))
+	b.WriteString("\n\n")
+
+	// Type
+	b.WriteString(selectedStyle.Render("Type: "))
+	b.WriteString(polygon.Type)
+	b.WriteString("\n\n")
+
+	// Labels
+	if len(polygon.Labels) > 0 {
+		b.WriteString(selectedStyle.Render("Labels:"))
+		b.WriteString("\n")
+		for code, label := range polygon.Labels {
+			langName := getLanguageName(code)
+			b.WriteString(fmt.Sprintf("  %s (%s): %s\n", code, langName, label))
+		}
+		b.WriteString("\n")
+	}
+
+	// Extended labels
+	if polygon.ExtendedLabels {
+		b.WriteString("Extended Labels: Yes\n\n")
+	}
+
+	// DayXpm
+	if polygon.DayXpm != nil {
+		b.WriteString(selectedStyle.Render("Day Pattern:"))
+		b.WriteString("\n")
+		b.WriteString(m.renderXPMInfo(polygon.DayXpm))
+		b.WriteString("\n")
+	}
+
+	// NightXpm
+	if polygon.NightXpm != nil {
+		b.WriteString(selectedStyle.Render("Night Pattern:"))
+		b.WriteString("\n")
+		b.WriteString(m.renderXPMInfo(polygon.NightXpm))
+		b.WriteString("\n")
+	}
+
+	return b.String()
+}
+
+// renderXPMInfo renders information about an XPM icon
+func (m Model) renderXPMInfo(xpm *parser.XPMIcon) string {
+	var b strings.Builder
+
+	b.WriteString(fmt.Sprintf("  Size: %dx%d\n", xpm.Width, xpm.Height))
+	b.WriteString(fmt.Sprintf("  Colors: %d\n", xpm.Colors))
+	b.WriteString(fmt.Sprintf("  Chars per pixel: %d\n", xpm.CharsPerPixel))
+
+	if len(xpm.Palette) > 0 {
+		b.WriteString("  Color Palette:\n")
+		for char, color := range xpm.Palette {
+			b.WriteString(fmt.Sprintf("    %s → %s\n", char, color.Hex))
+		}
+	}
+
+	return b.String()
+}
+
+// getLanguageName returns a human-readable language name for a language code
+func getLanguageName(code string) string {
+	// Common language codes used in Garmin TYP files
+	languages := map[string]string{
+		"0x01": "French",
+		"0x02": "German",
+		"0x03": "Dutch",
+		"0x04": "English",
+		"0x05": "Italian",
+		"0x06": "Finnish",
+		"0x07": "Swedish",
+		"0x08": "Spanish",
+		"0x09": "Basque",
+		"0x0a": "Catalan",
+		"0x0b": "Galician",
+		"0x0c": "Welsh",
+		"0x0d": "Gaelic",
+		"0x0e": "Danish",
+		"0x0f": "Norwegian",
+		"0x10": "Portuguese",
+		"0x11": "Slovak",
+		"0x12": "Czech",
+		"0x13": "Croatian",
+		"0x14": "Hungarian",
+		"0x15": "Polish",
+		"0x16": "Turkish",
+		"0x17": "Greek",
+		"0x18": "Slovenian",
+		"0x19": "Russian",
+		"0x1a": "Estonian",
+		"0x1b": "Latvian",
+		"0x1c": "Romanian",
+		"0x1d": "Albanian",
+		"0x1e": "Bosnian",
+		"0x1f": "Lithuanian",
+		"0x20": "Serbian",
+		"0x21": "Macedonian",
+		"0x22": "Bulgarian",
+	}
+
+	if name, ok := languages[code]; ok {
+		return name
+	}
+	return "Unknown"
 }

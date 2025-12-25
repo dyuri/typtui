@@ -67,6 +67,18 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
+
+	case "enter":
+		if m.mode == ModeList && m.typFile != nil && m.getMaxIndex() > 0 {
+			m.mode = ModeDetail
+		}
+		return m, nil
+
+	case "esc":
+		if m.mode == ModeDetail {
+			m.mode = ModeList
+		}
+		return m, nil
 	}
 
 	return m, nil

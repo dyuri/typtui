@@ -11,6 +11,7 @@ type Mode int
 
 const (
 	ModeList Mode = iota
+	ModeDetail
 	ModeEdit
 	ModeHelp
 	ModeError

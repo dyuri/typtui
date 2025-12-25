@@ -5,7 +5,9 @@
       "Bash(go get:*)",
       "Bash(go test:*)",
       "Bash(make build:*)",
-      "Bash(go mod tidy:*)"
+      "Bash(go mod tidy:*)",
+      "Bash(./bin/typtui:*)",
+      "Bash(echo:*)"
     ]
   }
 }
