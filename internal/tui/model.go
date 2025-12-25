@@ -95,7 +95,7 @@ func loadFileCmd(filePath string) tea.Cmd {
 
 // initPointEditInputs initializes text inputs for editing a point type
 func (m *Model) initPointEditInputs(point parser.PointType) {
-	inputs := make([]textinput.Model, 2)
+	inputs := make([]textinput.Model, 4)
 
 	// Type field
 	inputs[0] = textinput.New()
@@ -106,15 +106,31 @@ func (m *Model) initPointEditInputs(point parser.PointType) {
 	inputs[0].SetValue(point.Type)
 	inputs[0].Prompt = "Type: "
 
-	// English label field (0x04)
+	// SubType field
 	inputs[1] = textinput.New()
-	inputs[1].Placeholder = "Label"
-	inputs[1].CharLimit = 50
-	inputs[1].Width = 50
+	inputs[1].Placeholder = "e.g., 0x00 (optional)"
+	inputs[1].CharLimit = 10
+	inputs[1].Width = 30
+	inputs[1].SetValue(point.SubType)
+	inputs[1].Prompt = "SubType: "
+
+	// English label field (0x04)
+	inputs[2] = textinput.New()
+	inputs[2].Placeholder = "Label"
+	inputs[2].CharLimit = 50
+	inputs[2].Width = 50
 	if label, ok := point.Labels["0x04"]; ok {
-		inputs[1].SetValue(label)
+		inputs[2].SetValue(label)
 	}
-	inputs[1].Prompt = "Label (EN): "
+	inputs[2].Prompt = "Label (EN): "
+
+	// FontStyle field
+	inputs[3] = textinput.New()
+	inputs[3].Placeholder = "NoLabel, SmallFont, NormalFont, LargeFont"
+	inputs[3].CharLimit = 20
+	inputs[3].Width = 40
+	inputs[3].SetValue(point.FontStyle)
+	inputs[3].Prompt = "FontStyle: "
 
 	m.inputs = inputs
 	m.focusedField = 0
@@ -122,7 +138,7 @@ func (m *Model) initPointEditInputs(point parser.PointType) {
 
 // initLineEditInputs initializes text inputs for editing a line type
 func (m *Model) initLineEditInputs(line parser.LineType) {
-	inputs := make([]textinput.Model, 2)
+	inputs := make([]textinput.Model, 6)
 
 	// Type field
 	inputs[0] = textinput.New()
@@ -143,13 +159,53 @@ func (m *Model) initLineEditInputs(line parser.LineType) {
 	}
 	inputs[1].Prompt = "Label (EN): "
 
+	// LineWidth field
+	inputs[2] = textinput.New()
+	inputs[2].Placeholder = "e.g., 5"
+	inputs[2].CharLimit = 5
+	inputs[2].Width = 20
+	if line.LineWidth > 0 {
+		inputs[2].SetValue(fmt.Sprintf("%d", line.LineWidth))
+	}
+	inputs[2].Prompt = "LineWidth: "
+
+	// BorderWidth field
+	inputs[3] = textinput.New()
+	inputs[3].Placeholder = "e.g., 1"
+	inputs[3].CharLimit = 5
+	inputs[3].Width = 20
+	if line.BorderWidth > 0 {
+		inputs[3].SetValue(fmt.Sprintf("%d", line.BorderWidth))
+	}
+	inputs[3].Prompt = "BorderWidth: "
+
+	// LineStyle field
+	inputs[4] = textinput.New()
+	inputs[4].Placeholder = "solid, dashed, dotted"
+	inputs[4].CharLimit = 20
+	inputs[4].Width = 30
+	inputs[4].SetValue(line.LineStyle)
+	inputs[4].Prompt = "LineStyle: "
+
+	// UseOrientation field
+	inputs[5] = textinput.New()
+	inputs[5].Placeholder = "Y or N"
+	inputs[5].CharLimit = 1
+	inputs[5].Width = 10
+	if line.UseOrientation {
+		inputs[5].SetValue("Y")
+	} else {
+		inputs[5].SetValue("N")
+	}
+	inputs[5].Prompt = "UseOrientation: "
+
 	m.inputs = inputs
 	m.focusedField = 0
 }
 
 // initPolygonEditInputs initializes text inputs for editing a polygon type
 func (m *Model) initPolygonEditInputs(polygon parser.PolygonType) {
-	inputs := make([]textinput.Model, 2)
+	inputs := make([]textinput.Model, 4)
 
 	// Type field
 	inputs[0] = textinput.New()
@@ -169,6 +225,26 @@ func (m *Model) initPolygonEditInputs(polygon parser.PolygonType) {
 		inputs[1].SetValue(label)
 	}
 	inputs[1].Prompt = "Label (EN): "
+
+	// ExtendedLabels field
+	inputs[2] = textinput.New()
+	inputs[2].Placeholder = "Y or N"
+	inputs[2].CharLimit = 1
+	inputs[2].Width = 10
+	if polygon.ExtendedLabels {
+		inputs[2].SetValue("Y")
+	} else {
+		inputs[2].SetValue("N")
+	}
+	inputs[2].Prompt = "ExtendedLabels: "
+
+	// FontStyle field
+	inputs[3] = textinput.New()
+	inputs[3].Placeholder = "NoLabel, SmallFont, NormalFont, LargeFont"
+	inputs[3].CharLimit = 20
+	inputs[3].Width = 40
+	inputs[3].SetValue(polygon.FontStyle)
+	inputs[3].Prompt = "FontStyle: "
 
 	m.inputs = inputs
 	m.focusedField = 0

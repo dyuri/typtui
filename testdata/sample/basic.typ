@@ -23,9 +23,10 @@ DayXpm="8 8 2 1"
 
 [_line]
 Type=0x01
-String=0x04,Autópálya
-LineWidth=5
+String=0x04,Highway
+LineWidth=4
 BorderWidth=1
+LineStyle=solid
 Xpm="0 0 2 0"
 "1 c #FF0000"
 "2 c #000000"

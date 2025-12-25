@@ -2,6 +2,8 @@ package tui
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -212,37 +214,72 @@ func (m *Model) saveEdits() {
 		return
 	}
 
-	// Get values from inputs
-	typeValue := m.inputs[0].Value()
-	labelValue := m.inputs[1].Value()
-
 	// Update the appropriate structure
 	switch m.activeTab {
 	case TabPoints:
-		if m.selectedIdx < len(m.typFile.Points) {
-			m.typFile.Points[m.selectedIdx].Type = typeValue
+		if m.selectedIdx < len(m.typFile.Points) && len(m.inputs) >= 4 {
+			// Type (index 0)
+			m.typFile.Points[m.selectedIdx].Type = m.inputs[0].Value()
+
+			// SubType (index 1)
+			m.typFile.Points[m.selectedIdx].SubType = m.inputs[1].Value()
+
+			// Label (index 2)
 			if m.typFile.Points[m.selectedIdx].Labels == nil {
 				m.typFile.Points[m.selectedIdx].Labels = make(map[string]string)
 			}
-			m.typFile.Points[m.selectedIdx].Labels["0x04"] = labelValue
+			m.typFile.Points[m.selectedIdx].Labels["0x04"] = m.inputs[2].Value()
+
+			// FontStyle (index 3)
+			m.typFile.Points[m.selectedIdx].FontStyle = m.inputs[3].Value()
 		}
 
 	case TabLines:
-		if m.selectedIdx < len(m.typFile.Lines) {
-			m.typFile.Lines[m.selectedIdx].Type = typeValue
+		if m.selectedIdx < len(m.typFile.Lines) && len(m.inputs) >= 6 {
+			// Type (index 0)
+			m.typFile.Lines[m.selectedIdx].Type = m.inputs[0].Value()
+
+			// Label (index 1)
 			if m.typFile.Lines[m.selectedIdx].Labels == nil {
 				m.typFile.Lines[m.selectedIdx].Labels = make(map[string]string)
 			}
-			m.typFile.Lines[m.selectedIdx].Labels["0x04"] = labelValue
+			m.typFile.Lines[m.selectedIdx].Labels["0x04"] = m.inputs[1].Value()
+
+			// LineWidth (index 2)
+			if width, err := strconv.Atoi(m.inputs[2].Value()); err == nil {
+				m.typFile.Lines[m.selectedIdx].LineWidth = width
+			}
+
+			// BorderWidth (index 3)
+			if width, err := strconv.Atoi(m.inputs[3].Value()); err == nil {
+				m.typFile.Lines[m.selectedIdx].BorderWidth = width
+			}
+
+			// LineStyle (index 4)
+			m.typFile.Lines[m.selectedIdx].LineStyle = m.inputs[4].Value()
+
+			// UseOrientation (index 5)
+			useOrient := strings.ToUpper(m.inputs[5].Value())
+			m.typFile.Lines[m.selectedIdx].UseOrientation = (useOrient == "Y" || useOrient == "YES")
 		}
 
 	case TabPolygons:
-		if m.selectedIdx < len(m.typFile.Polygons) {
-			m.typFile.Polygons[m.selectedIdx].Type = typeValue
+		if m.selectedIdx < len(m.typFile.Polygons) && len(m.inputs) >= 4 {
+			// Type (index 0)
+			m.typFile.Polygons[m.selectedIdx].Type = m.inputs[0].Value()
+
+			// Label (index 1)
 			if m.typFile.Polygons[m.selectedIdx].Labels == nil {
 				m.typFile.Polygons[m.selectedIdx].Labels = make(map[string]string)
 			}
-			m.typFile.Polygons[m.selectedIdx].Labels["0x04"] = labelValue
+			m.typFile.Polygons[m.selectedIdx].Labels["0x04"] = m.inputs[1].Value()
+
+			// ExtendedLabels (index 2)
+			extLabels := strings.ToUpper(m.inputs[2].Value())
+			m.typFile.Polygons[m.selectedIdx].ExtendedLabels = (extLabels == "Y" || extLabels == "YES")
+
+			// FontStyle (index 3)
+			m.typFile.Polygons[m.selectedIdx].FontStyle = m.inputs[3].Value()
 		}
 	}
 }

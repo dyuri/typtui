@@ -279,6 +279,8 @@ func (p *Parser) parseLineProperty(line *LineType, textLine string) error {
 		line.LineWidth, err = strconv.Atoi(value)
 	case "BorderWidth":
 		line.BorderWidth, err = strconv.Atoi(value)
+	case "LineStyle":
+		line.LineStyle = value
 	case "Xpm":
 		line.DayXpm, err = p.parseXPM(value)
 	case "UseOrientation":
