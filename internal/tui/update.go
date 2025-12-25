@@ -440,6 +440,8 @@ func (m Model) handleXPMEditKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 
 			m.inputs = nil
+			// Rebuild viewport content after color change
+			m.updateXPMViewportContent()
 			return m, nil
 
 		case "esc":
@@ -471,26 +473,6 @@ func (m Model) handleXPMEditKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.editingXPM = nil
 		return m, nil
 
-	case "up", "k":
-		// Scroll viewport up
-		m.xpmViewport.LineUp(1)
-		return m, nil
-
-	case "down", "j":
-		// Scroll viewport down
-		m.xpmViewport.LineDown(1)
-		return m, nil
-
-	case "pgup":
-		// Page up in viewport
-		m.xpmViewport.ViewUp()
-		return m, nil
-
-	case "pgdown":
-		// Page down in viewport
-		m.xpmViewport.ViewDown()
-		return m, nil
-
 	case "tab":
 		// Navigate palette colors down
 		if m.xpmColorIdx < maxColors-1 {
@@ -498,6 +480,8 @@ func (m Model) handleXPMEditKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.xpmColorIdx = 0
 		}
+		// Rebuild viewport content to reflect selection change
+		m.updateXPMViewportContent()
 		return m, nil
 
 	case "shift+tab":
@@ -507,11 +491,18 @@ func (m Model) handleXPMEditKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.xpmColorIdx = maxColors - 1
 		}
+		// Rebuild viewport content to reflect selection change
+		m.updateXPMViewportContent()
 		return m, nil
 
 	case "enter":
 		// Edit the selected color
 		return m.enterColorEdit()
+
+	default:
+		// Forward other keys to viewport for scrolling
+		m.xpmViewport, cmd = m.xpmViewport.Update(msg)
+		return m, cmd
 	}
 
 	return m, nil

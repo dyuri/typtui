@@ -350,88 +350,14 @@ func (m Model) viewEditXPM() string {
 		return "No XPM data"
 	}
 
-	var content strings.Builder
-
-	// XPM Info
-	content.WriteString(fmt.Sprintf("Size: %dx%d, Colors: %d, Chars/pixel: %d\n\n",
-		m.editingXPM.Width, m.editingXPM.Height, m.editingXPM.Colors, m.editingXPM.CharsPerPixel))
-
-	// Color Palette
-	content.WriteString(selectedStyle.Render("Color Palette"))
-	content.WriteString("\n\n")
-
-	// Convert map to sorted slice for consistent ordering
-	type colorEntry struct {
-		char  string
-		color parser.Color
-	}
-	var colors []colorEntry
-	for char, color := range m.editingXPM.Palette {
-		colors = append(colors, colorEntry{char, color})
-	}
-
-	// Sort alphabetically by character
-	sort.Slice(colors, func(i, j int) bool {
-		return colors[i].char < colors[j].char
-	})
-
-	for i, entry := range colors {
-		prefix := "  "
-		if i == m.xpmColorIdx {
-			prefix = "▸ "
-		}
-
-		colorDisplay := renderColorWithPreview(entry.color.Hex)
-		line := fmt.Sprintf("%s%s → %s", prefix, entry.char, colorDisplay)
-
-		if i == m.xpmColorIdx {
-			content.WriteString(selectedStyle.Render(line))
-		} else {
-			content.WriteString(line)
-		}
-		content.WriteString("\n")
-	}
-
-	content.WriteString("\n")
-
-	// Pixel preview with colors
-	content.WriteString(selectedStyle.Render("Icon Preview"))
-	content.WriteString("\n")
-
-	// Render all rows of the XPM with colors
-	for i := 0; i < len(m.editingXPM.Data); i++ {
-		content.WriteString("  ")
-		row := m.editingXPM.Data[i]
-
-		// Process each character/pixel in the row
-		for _, char := range row {
-			charStr := string(char)
-
-			// Look up the color for this character
-			if color, ok := m.editingXPM.Palette[charStr]; ok {
-				content.WriteString(renderPixelWithColor(color.Hex, charStr))
-			} else {
-				// Unknown character, show as gray
-				content.WriteString(renderPixelWithColor("#808080", charStr))
-			}
-		}
-
-		// Reset color at end of line
-		content.WriteString("\x1b[0m\n")
-	}
-
-	// Build the final view
 	var b strings.Builder
 
 	// Header (fixed, not scrollable)
 	b.WriteString(titleStyle.Render(fmt.Sprintf("Edit %s", m.editingXPMType)))
 	b.WriteString("\n\n")
 
-	// Update viewport content and render
-	// Note: We need to create a mutable copy to call SetContent
-	viewport := m.xpmViewport
-	viewport.SetContent(content.String())
-	b.WriteString(viewport.View())
+	// Scrollable content area (content already set in viewport via updateXPMViewportContent)
+	b.WriteString(m.xpmViewport.View())
 	b.WriteString("\n")
 
 	// Footer (fixed, not scrollable)

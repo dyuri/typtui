@@ -2,6 +2,9 @@ package tui
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -289,6 +292,148 @@ func (m *Model) initXPMViewport() {
 
 	m.xpmViewport = viewport.New(m.width, viewportHeight)
 	m.xpmViewport.YPosition = 3 // Position after header
+
+	// Set initial content
+	m.updateXPMViewportContent()
+}
+
+// updateXPMViewportContent rebuilds and updates the viewport content
+func (m *Model) updateXPMViewportContent() {
+	if m.editingXPM == nil {
+		return
+	}
+
+	var content strings.Builder
+
+	// XPM Info
+	content.WriteString(fmt.Sprintf("Size: %dx%d, Colors: %d, Chars/pixel: %d\n\n",
+		m.editingXPM.Width, m.editingXPM.Height, m.editingXPM.Colors, m.editingXPM.CharsPerPixel))
+
+	// Color Palette
+	content.WriteString("Color Palette\n\n")
+
+	// Convert map to sorted slice for consistent ordering
+	type colorEntry struct {
+		char  string
+		color parser.Color
+	}
+	var colors []colorEntry
+	for char, color := range m.editingXPM.Palette {
+		colors = append(colors, colorEntry{char, color})
+	}
+
+	// Sort alphabetically by character
+	sort.Slice(colors, func(i, j int) bool {
+		return colors[i].char < colors[j].char
+	})
+
+	for i, entry := range colors {
+		prefix := "  "
+		if i == m.xpmColorIdx {
+			prefix = "▸ "
+		}
+
+		// Render color with preview
+		colorDisplay := m.renderColorPreview(entry.color.Hex)
+		content.WriteString(fmt.Sprintf("%s%s → %s\n", prefix, entry.char, colorDisplay))
+	}
+
+	content.WriteString("\n")
+
+	// Icon Preview
+	content.WriteString("Icon Preview\n")
+
+	// Render all rows of the XPM with colors
+	for i := 0; i < len(m.editingXPM.Data); i++ {
+		content.WriteString("  ")
+		row := m.editingXPM.Data[i]
+
+		// Process each character/pixel with colors
+		for _, char := range row {
+			charStr := string(char)
+
+			// Look up the color for this character
+			if color, ok := m.editingXPM.Palette[charStr]; ok {
+				content.WriteString(m.renderPixelColored(color.Hex, charStr))
+			} else {
+				// Unknown character, show as gray
+				content.WriteString(m.renderPixelColored("#808080", charStr))
+			}
+		}
+
+		// Reset color at end of line
+		content.WriteString("\x1b[0m\n")
+	}
+
+	m.xpmViewport.SetContent(content.String())
+}
+
+// renderColorPreview renders a color with a visual preview block
+func (m Model) renderColorPreview(hexColor string) string {
+	if hexColor == "" || hexColor == "none" || hexColor == "transparent" {
+		return hexColor
+	}
+
+	// Parse hex color
+	hex := strings.TrimPrefix(hexColor, "#")
+	if len(hex) != 6 {
+		return hexColor // Invalid format, just return as-is
+	}
+
+	// Convert hex to RGB
+	r, err1 := strconv.ParseInt(hex[0:2], 16, 64)
+	g, err2 := strconv.ParseInt(hex[2:4], 16, 64)
+	b, err3 := strconv.ParseInt(hex[4:6], 16, 64)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return hexColor // Parse error, return as-is
+	}
+
+	// Create ANSI 24-bit true color code for the block character
+	colorPreview := fmt.Sprintf("\x1b[38;2;%d;%d;%dm■\x1b[0m", r, g, b)
+	return fmt.Sprintf("%s %s", hexColor, colorPreview)
+}
+
+// renderPixelColored renders a pixel with colored background and contrasting text
+func (m Model) renderPixelColored(hexColor string, char string) string {
+	// Handle transparent/none colors
+	if hexColor == "" || hexColor == "none" || hexColor == "transparent" {
+		// Use a light gray background with the character in black
+		return fmt.Sprintf("\x1b[48;2;240;240;240m\x1b[38;2;0;0;0m%s\x1b[0m", char)
+	}
+
+	// Parse hex color
+	hex := strings.TrimPrefix(hexColor, "#")
+	if len(hex) != 6 {
+		// Invalid color, use gray with black text
+		return fmt.Sprintf("\x1b[48;2;128;128;128m\x1b[38;2;0;0;0m%s\x1b[0m", char)
+	}
+
+	// Convert hex to RGB
+	r, err1 := strconv.ParseInt(hex[0:2], 16, 64)
+	g, err2 := strconv.ParseInt(hex[2:4], 16, 64)
+	b, err3 := strconv.ParseInt(hex[4:6], 16, 64)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		// Parse error, use gray with black text
+		return fmt.Sprintf("\x1b[48;2;128;128;128m\x1b[38;2;0;0;0m%s\x1b[0m", char)
+	}
+
+	// Calculate luminance using the relative luminance formula
+	// Y = 0.299*R + 0.587*G + 0.114*B
+	luminance := float64(r)*0.299 + float64(g)*0.587 + float64(b)*0.114
+
+	// Choose foreground color based on luminance
+	// If luminance > 128, use black text; otherwise use white text
+	var fgR, fgG, fgB int64
+	if luminance > 128 {
+		fgR, fgG, fgB = 0, 0, 0 // Black
+	} else {
+		fgR, fgG, fgB = 255, 255, 255 // White
+	}
+
+	// Create ANSI 24-bit background and foreground color with the character
+	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm\x1b[38;2;%d;%d;%dm%s\x1b[0m", r, g, b, fgR, fgG, fgB, char)
 }
 
 // saveFile saves the current TYPFile to disk
