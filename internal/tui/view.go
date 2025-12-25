@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -363,6 +364,36 @@ func (m Model) renderPointDetail(point parser.PointType) string {
 		b.WriteString("\n")
 	}
 
+	// DayColors
+	if len(point.DayColors) > 0 {
+		b.WriteString(selectedStyle.Render("Day Colors:"))
+		b.WriteString("\n")
+		for i, color := range point.DayColors {
+			colorDisplay := renderColorWithPreview(color.Hex)
+			name := color.Name
+			if name == "" {
+				name = fmt.Sprintf("Color %d", i+1)
+			}
+			b.WriteString(fmt.Sprintf("  %s: %s\n", name, colorDisplay))
+		}
+		b.WriteString("\n")
+	}
+
+	// NightColors
+	if len(point.NightColors) > 0 {
+		b.WriteString(selectedStyle.Render("Night Colors:"))
+		b.WriteString("\n")
+		for i, color := range point.NightColors {
+			colorDisplay := renderColorWithPreview(color.Hex)
+			name := color.Name
+			if name == "" {
+				name = fmt.Sprintf("Color %d", i+1)
+			}
+			b.WriteString(fmt.Sprintf("  %s: %s\n", name, colorDisplay))
+		}
+		b.WriteString("\n")
+	}
+
 	// DayXpm
 	if point.DayXpm != nil {
 		b.WriteString(selectedStyle.Render("Day Icon:"))
@@ -494,11 +525,38 @@ func (m Model) renderXPMInfo(xpm *parser.XPMIcon) string {
 	if len(xpm.Palette) > 0 {
 		b.WriteString("  Color Palette:\n")
 		for char, color := range xpm.Palette {
-			b.WriteString(fmt.Sprintf("    %s → %s\n", char, color.Hex))
+			colorDisplay := renderColorWithPreview(color.Hex)
+			b.WriteString(fmt.Sprintf("    %s → %s\n", char, colorDisplay))
 		}
 	}
 
 	return b.String()
+}
+
+// renderColorWithPreview renders a color hex code with a visual preview using ANSI codes
+func renderColorWithPreview(hexColor string) string {
+	if hexColor == "" || hexColor == "none" || hexColor == "transparent" {
+		return hexColor
+	}
+
+	// Parse hex color (supports #RRGGBB or RRGGBB)
+	hex := strings.TrimPrefix(hexColor, "#")
+	if len(hex) != 6 {
+		return hexColor // Invalid format, just return as-is
+	}
+
+	// Convert hex to RGB
+	r, err1 := strconv.ParseInt(hex[0:2], 16, 64)
+	g, err2 := strconv.ParseInt(hex[2:4], 16, 64)
+	b, err3 := strconv.ParseInt(hex[4:6], 16, 64)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		return hexColor // Parse error, return as-is
+	}
+
+	// Create ANSI 24-bit true color code for the block character
+	colorPreview := fmt.Sprintf("\x1b[38;2;%d;%d;%dm■\x1b[0m", r, g, b)
+	return fmt.Sprintf("%s %s", hexColor, colorPreview)
 }
 
 // getLanguageName returns a human-readable language name for a language code

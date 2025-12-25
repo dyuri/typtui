@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/dyuri/typtui/internal/parser"
 )
 
 // Update handles messages and updates the model
@@ -217,7 +218,7 @@ func (m *Model) saveEdits() {
 	// Update the appropriate structure
 	switch m.activeTab {
 	case TabPoints:
-		if m.selectedIdx < len(m.typFile.Points) && len(m.inputs) >= 4 {
+		if m.selectedIdx < len(m.typFile.Points) && len(m.inputs) >= 6 {
 			// Type (index 0)
 			m.typFile.Points[m.selectedIdx].Type = m.inputs[0].Value()
 
@@ -232,6 +233,40 @@ func (m *Model) saveEdits() {
 
 			// FontStyle (index 3)
 			m.typFile.Points[m.selectedIdx].FontStyle = m.inputs[3].Value()
+
+			// Day Color (index 4)
+			dayColorValue := m.inputs[4].Value()
+			if dayColorValue != "" {
+				// Ensure # prefix
+				if !strings.HasPrefix(dayColorValue, "#") {
+					dayColorValue = "#" + dayColorValue
+				}
+				// Update or create day color
+				if len(m.typFile.Points[m.selectedIdx].DayColors) > 0 {
+					m.typFile.Points[m.selectedIdx].DayColors[0].Hex = dayColorValue
+				} else {
+					m.typFile.Points[m.selectedIdx].DayColors = []parser.Color{
+						{Hex: dayColorValue, Day: true},
+					}
+				}
+			}
+
+			// Night Color (index 5)
+			nightColorValue := m.inputs[5].Value()
+			if nightColorValue != "" {
+				// Ensure # prefix
+				if !strings.HasPrefix(nightColorValue, "#") {
+					nightColorValue = "#" + nightColorValue
+				}
+				// Update or create night color
+				if len(m.typFile.Points[m.selectedIdx].NightColors) > 0 {
+					m.typFile.Points[m.selectedIdx].NightColors[0].Hex = nightColorValue
+				} else {
+					m.typFile.Points[m.selectedIdx].NightColors = []parser.Color{
+						{Hex: nightColorValue, Day: false},
+					}
+				}
+			}
 		}
 
 	case TabLines:

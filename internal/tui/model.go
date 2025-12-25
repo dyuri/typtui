@@ -95,7 +95,7 @@ func loadFileCmd(filePath string) tea.Cmd {
 
 // initPointEditInputs initializes text inputs for editing a point type
 func (m *Model) initPointEditInputs(point parser.PointType) {
-	inputs := make([]textinput.Model, 4)
+	inputs := make([]textinput.Model, 6)
 
 	// Type field
 	inputs[0] = textinput.New()
@@ -131,6 +131,26 @@ func (m *Model) initPointEditInputs(point parser.PointType) {
 	inputs[3].Width = 40
 	inputs[3].SetValue(point.FontStyle)
 	inputs[3].Prompt = "FontStyle: "
+
+	// Day Color field
+	inputs[4] = textinput.New()
+	inputs[4].Placeholder = "#RRGGBB (e.g., #FF0000)"
+	inputs[4].CharLimit = 7
+	inputs[4].Width = 30
+	if len(point.DayColors) > 0 {
+		inputs[4].SetValue(point.DayColors[0].Hex)
+	}
+	inputs[4].Prompt = "Day Color: "
+
+	// Night Color field
+	inputs[5] = textinput.New()
+	inputs[5].Placeholder = "#RRGGBB (e.g., #0000FF)"
+	inputs[5].CharLimit = 7
+	inputs[5].Width = 30
+	if len(point.NightColors) > 0 {
+		inputs[5].SetValue(point.NightColors[0].Hex)
+	}
+	inputs[5].Prompt = "Night Color: "
 
 	m.inputs = inputs
 	m.focusedField = 0

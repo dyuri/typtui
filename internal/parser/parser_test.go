@@ -82,12 +82,16 @@ func TestParseBasicFile(t *testing.T) {
 		t.Errorf("Expected line type 0x01, got %s", line.Type)
 	}
 
-	if line.LineWidth != 5 {
-		t.Errorf("Expected line width 5, got %d", line.LineWidth)
+	if line.LineWidth != 4 {
+		t.Errorf("Expected line width 4, got %d", line.LineWidth)
 	}
 
 	if line.BorderWidth != 1 {
 		t.Errorf("Expected border width 1, got %d", line.BorderWidth)
+	}
+
+	if line.LineStyle != "solid" {
+		t.Errorf("Expected line style 'solid', got '%s'", line.LineStyle)
 	}
 
 	// Check polygons

@@ -97,6 +97,20 @@ func writePointType(b *strings.Builder, point PointType) error {
 		}
 	}
 
+	// DayColors
+	for _, color := range point.DayColors {
+		if color.Hex != "" {
+			b.WriteString(fmt.Sprintf("DayCustomColor=%s\n", color.Hex))
+		}
+	}
+
+	// NightColors
+	for _, color := range point.NightColors {
+		if color.Hex != "" {
+			b.WriteString(fmt.Sprintf("NightCustomColor=%s\n", color.Hex))
+		}
+	}
+
 	// FontStyle
 	if point.FontStyle != "" {
 		b.WriteString(fmt.Sprintf("FontStyle=%s\n", point.FontStyle))
