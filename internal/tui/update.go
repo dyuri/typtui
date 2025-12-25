@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dyuri/typtui/internal/parser"
 )
@@ -16,6 +17,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// In edit mode, handle special keys first, then forward to inputs
 		if m.mode == ModeEdit {
 			return m.handleEditModeKeyPress(msg)
+		}
+		// In XPM edit mode, handle XPM-specific navigation
+		if m.mode == ModeEditXPM {
+			return m.handleXPMEditKeyPress(msg)
 		}
 		return m.handleKeyPress(msg)
 
@@ -131,6 +136,35 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			case TabPolygons:
 				if m.selectedIdx < len(m.typFile.Polygons) {
 					m.initPolygonEditInputs(m.typFile.Polygons[m.selectedIdx])
+				}
+			}
+		}
+		return m, nil
+
+	case "x":
+		if m.mode == ModeDetail && m.typFile != nil {
+			// Enter XPM edit mode - default to DayXpm
+			switch m.activeTab {
+			case TabPoints:
+				if m.selectedIdx < len(m.typFile.Points) && m.typFile.Points[m.selectedIdx].DayXpm != nil {
+					m.editingXPM = m.typFile.Points[m.selectedIdx].DayXpm
+					m.editingXPMType = "DayXpm"
+					m.xpmColorIdx = 0
+					m.mode = ModeEditXPM
+				}
+			case TabLines:
+				if m.selectedIdx < len(m.typFile.Lines) && m.typFile.Lines[m.selectedIdx].DayXpm != nil {
+					m.editingXPM = m.typFile.Lines[m.selectedIdx].DayXpm
+					m.editingXPMType = "Xpm"
+					m.xpmColorIdx = 0
+					m.mode = ModeEditXPM
+				}
+			case TabPolygons:
+				if m.selectedIdx < len(m.typFile.Polygons) && m.typFile.Polygons[m.selectedIdx].DayXpm != nil {
+					m.editingXPM = m.typFile.Polygons[m.selectedIdx].DayXpm
+					m.editingXPMType = "Xpm"
+					m.xpmColorIdx = 0
+					m.mode = ModeEditXPM
 				}
 			}
 		}
@@ -341,5 +375,125 @@ func (m Model) handleConfirmQuit(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	return m, nil
+}
+
+// handleXPMEditKeyPress handles keyboard input in XPM edit mode
+func (m Model) handleXPMEditKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	if m.editingXPM == nil {
+		return m, nil
+	}
+
+	// If we're editing a color (input is active), handle that differently
+	if len(m.inputs) > 0 {
+		switch msg.String() {
+		case "enter":
+			// Save the color change
+			newColor := m.inputs[0].Value()
+			if !strings.HasPrefix(newColor, "#") {
+				newColor = "#" + newColor
+			}
+
+			// Find and update the color at xpmColorIdx
+			i := 0
+			for char := range m.editingXPM.Palette {
+				if i == m.xpmColorIdx {
+					color := m.editingXPM.Palette[char]
+					color.Hex = newColor
+					m.editingXPM.Palette[char] = color
+					break
+				}
+				i++
+			}
+
+			m.inputs = nil
+			return m, nil
+
+		case "esc":
+			// Cancel color edit
+			m.inputs = nil
+			return m, nil
+
+		default:
+			// Forward to text input
+			m.inputs[0], cmd = m.inputs[0].Update(msg)
+			return m, cmd
+		}
+	}
+
+	maxColors := len(m.editingXPM.Palette)
+
+	switch msg.String() {
+	case "ctrl+s":
+		// Save changes and return to detail view
+		m.modified = true
+		m.mode = ModeDetail
+		m.editingXPM = nil
+		m.status = "XPM changes saved"
+		return m, nil
+
+	case "esc":
+		// Cancel and return to detail view
+		m.mode = ModeDetail
+		m.editingXPM = nil
+		return m, nil
+
+	case "up", "k":
+		// Navigate palette colors up
+		if m.xpmColorIdx > 0 {
+			m.xpmColorIdx--
+		}
+		return m, nil
+
+	case "down", "j":
+		// Navigate palette colors down
+		if m.xpmColorIdx < maxColors-1 {
+			m.xpmColorIdx++
+		}
+		return m, nil
+
+	case "enter":
+		// Edit the selected color
+		return m.enterColorEdit()
+	}
+
+	return m, nil
+}
+
+// enterColorEdit enters color editing mode for the selected palette entry
+func (m Model) enterColorEdit() (tea.Model, tea.Cmd) {
+	if m.editingXPM == nil || len(m.editingXPM.Palette) == 0 {
+		return m, nil
+	}
+
+	// Get the color at the current index
+	// Since maps don't have order, we need to iterate
+	i := 0
+	var selectedChar string
+	var selectedColor parser.Color
+	for char, color := range m.editingXPM.Palette {
+		if i == m.xpmColorIdx {
+			selectedChar = char
+			selectedColor = color
+			break
+		}
+		i++
+	}
+
+	// Create a single text input for the color
+	input := textinput.New()
+	input.Placeholder = "#RRGGBB"
+	input.CharLimit = 7
+	input.Width = 30
+	input.SetValue(selectedColor.Hex)
+	input.Focus()
+	input.Prompt = fmt.Sprintf("Color for '%s': ", selectedChar)
+
+	m.inputs = []textinput.Model{input}
+	m.focusedField = 0
+
+	// Stay in XPM edit mode but now show the input
 	return m, nil
 }

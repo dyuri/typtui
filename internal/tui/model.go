@@ -16,6 +16,7 @@ const (
 	ModeList Mode = iota
 	ModeDetail
 	ModeEdit
+	ModeEditXPM
 	ModeHelp
 	ModeError
 	ModeConfirmQuit
@@ -51,6 +52,11 @@ type Model struct {
 	// Edit mode state
 	focusedField int
 	inputs       []textinput.Model
+
+	// XPM edit mode state
+	editingXPM     *parser.XPMIcon
+	editingXPMType string // "DayXpm", "NightXpm", etc.
+	xpmColorIdx    int    // Currently selected color in palette
 
 	// Messages
 	err    error

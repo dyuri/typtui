@@ -54,6 +54,8 @@ func (m Model) View() string {
 		return m.viewDetail()
 	case ModeEdit:
 		return m.viewEdit()
+	case ModeEditXPM:
+		return m.viewEditXPM()
 	case ModeConfirmQuit:
 		return m.viewConfirmQuit()
 	default:
@@ -278,7 +280,7 @@ func (m Model) viewDetail() string {
 	}
 
 	b.WriteString("\n\n")
-	b.WriteString(helpStyle.Render("[e] Edit  [Esc] Back  [?] Help  [q] Quit"))
+	b.WriteString(helpStyle.Render("[e] Edit  [x] Edit XPM  [Esc] Back  [?] Help  [q] Quit"))
 
 	return b.String()
 }
@@ -339,6 +341,89 @@ func (m Model) viewConfirmQuit() string {
 	b.WriteString("  [Esc/C] Cancel and return\n")
 
 	return b.String()
+}
+
+// viewEditXPM renders the XPM editor
+func (m Model) viewEditXPM() string {
+	if m.editingXPM == nil {
+		return "No XPM data"
+	}
+
+	var b strings.Builder
+
+	// Header
+	b.WriteString(titleStyle.Render(fmt.Sprintf("Edit %s", m.editingXPMType)))
+	b.WriteString("\n\n")
+
+	// XPM Info
+	b.WriteString(fmt.Sprintf("Size: %dx%d, Colors: %d, Chars/pixel: %d\n\n",
+		m.editingXPM.Width, m.editingXPM.Height, m.editingXPM.Colors, m.editingXPM.CharsPerPixel))
+
+	// Color Palette
+	b.WriteString(selectedStyle.Render("Color Palette"))
+	b.WriteString(" (↑/↓ to navigate, Enter to edit)\n\n")
+
+	// Convert map to sorted slice for consistent ordering
+	type colorEntry struct {
+		char  string
+		color parser.Color
+	}
+	var colors []colorEntry
+	for char, color := range m.editingXPM.Palette {
+		colors = append(colors, colorEntry{char, color})
+	}
+
+	for i, entry := range colors {
+		prefix := "  "
+		if i == m.xpmColorIdx {
+			prefix = "▸ "
+		}
+
+		colorDisplay := renderColorWithPreview(entry.color.Hex)
+		line := fmt.Sprintf("%s%s → %s", prefix, entry.char, colorDisplay)
+
+		if i == m.xpmColorIdx {
+			b.WriteString(selectedStyle.Render(line))
+		} else {
+			b.WriteString(line)
+		}
+		b.WriteString("\n")
+	}
+
+	b.WriteString("\n")
+
+	// Pixel preview (show first few rows)
+	b.WriteString(selectedStyle.Render("Pixel Data"))
+	b.WriteString(fmt.Sprintf(" (showing first %d rows)\n", min(10, len(m.editingXPM.Data))))
+	for i := 0; i < min(10, len(m.editingXPM.Data)); i++ {
+		b.WriteString(fmt.Sprintf("  %s\n", m.editingXPM.Data[i]))
+	}
+	if len(m.editingXPM.Data) > 10 {
+		b.WriteString(fmt.Sprintf("  ... and %d more rows\n", len(m.editingXPM.Data)-10))
+	}
+
+	b.WriteString("\n")
+
+	// Show color input if editing a color
+	if len(m.inputs) > 0 {
+		b.WriteString(selectedStyle.Render("Edit Color:"))
+		b.WriteString("\n")
+		b.WriteString(m.inputs[0].View())
+		b.WriteString("\n\n")
+		b.WriteString(helpStyle.Render("[Enter] Save Color  [Esc] Cancel"))
+	} else {
+		b.WriteString(helpStyle.Render("[↑/↓] Navigate  [Enter] Edit Color  [Esc] Back  [Ctrl+S] Save"))
+	}
+
+	return b.String()
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // renderPointDetail renders the details of a point type
