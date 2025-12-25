@@ -28,6 +28,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+
+		// Update viewport size if in XPM edit mode
+		if m.mode == ModeEditXPM {
+			headerFooterHeight := 7
+			viewportHeight := m.height - headerFooterHeight
+			if viewportHeight < 10 {
+				viewportHeight = 10
+			}
+			m.xpmViewport.Width = m.width
+			m.xpmViewport.Height = viewportHeight
+		}
+
 		return m, nil
 
 	case fileLoadedMsg:
@@ -152,6 +164,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.editingXPMType = "DayXpm"
 					m.xpmColorIdx = 0
 					m.mode = ModeEditXPM
+					// Initialize viewport for XPM editor
+					m.initXPMViewport()
 				}
 			case TabLines:
 				if m.selectedIdx < len(m.typFile.Lines) && m.typFile.Lines[m.selectedIdx].DayXpm != nil {
@@ -159,6 +173,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.editingXPMType = "Xpm"
 					m.xpmColorIdx = 0
 					m.mode = ModeEditXPM
+					// Initialize viewport for XPM editor
+					m.initXPMViewport()
 				}
 			case TabPolygons:
 				if m.selectedIdx < len(m.typFile.Polygons) && m.typFile.Polygons[m.selectedIdx].DayXpm != nil {
@@ -166,6 +182,8 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					m.editingXPMType = "Xpm"
 					m.xpmColorIdx = 0
 					m.mode = ModeEditXPM
+					// Initialize viewport for XPM editor
+					m.initXPMViewport()
 				}
 			}
 		}
@@ -454,16 +472,40 @@ func (m Model) handleXPMEditKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "up", "k":
-		// Navigate palette colors up
-		if m.xpmColorIdx > 0 {
-			m.xpmColorIdx--
-		}
+		// Scroll viewport up
+		m.xpmViewport.LineUp(1)
 		return m, nil
 
 	case "down", "j":
+		// Scroll viewport down
+		m.xpmViewport.LineDown(1)
+		return m, nil
+
+	case "pgup":
+		// Page up in viewport
+		m.xpmViewport.ViewUp()
+		return m, nil
+
+	case "pgdown":
+		// Page down in viewport
+		m.xpmViewport.ViewDown()
+		return m, nil
+
+	case "tab":
 		// Navigate palette colors down
 		if m.xpmColorIdx < maxColors-1 {
 			m.xpmColorIdx++
+		} else {
+			m.xpmColorIdx = 0
+		}
+		return m, nil
+
+	case "shift+tab":
+		// Navigate palette colors up
+		if m.xpmColorIdx > 0 {
+			m.xpmColorIdx--
+		} else {
+			m.xpmColorIdx = maxColors - 1
 		}
 		return m, nil
 

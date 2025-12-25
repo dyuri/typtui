@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/dyuri/typtui/internal/parser"
 )
@@ -57,6 +58,7 @@ type Model struct {
 	editingXPM     *parser.XPMIcon
 	editingXPMType string // "DayXpm", "NightXpm", etc.
 	xpmColorIdx    int    // Currently selected color in palette
+	xpmViewport    viewport.Model
 
 	// Messages
 	err    error
@@ -274,6 +276,19 @@ func (m *Model) initPolygonEditInputs(polygon parser.PolygonType) {
 
 	m.inputs = inputs
 	m.focusedField = 0
+}
+
+// initXPMViewport initializes the viewport for XPM editing
+func (m *Model) initXPMViewport() {
+	// Reserve space for header (3 lines) and footer (4 lines)
+	headerFooterHeight := 7
+	viewportHeight := m.height - headerFooterHeight
+	if viewportHeight < 10 {
+		viewportHeight = 10 // Minimum height
+	}
+
+	m.xpmViewport = viewport.New(m.width, viewportHeight)
+	m.xpmViewport.YPosition = 3 // Position after header
 }
 
 // saveFile saves the current TYPFile to disk

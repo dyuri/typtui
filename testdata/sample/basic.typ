@@ -8,9 +8,10 @@ ProductCode=1
 Type=0x2f06
 String=0x04,Bank
 String=0x01,Banque
-DayXpm="8 8 2 1"
+DayXpm="8 8 3 1"
 "  c none"
 "! c #778899"
+"$ c #FFDD00"
 "!!!!!!!!"
 "!      !"
 "! $$$$ !"

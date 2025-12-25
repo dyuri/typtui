@@ -344,25 +344,21 @@ func (m Model) viewConfirmQuit() string {
 	return b.String()
 }
 
-// viewEditXPM renders the XPM editor
+// viewEditXPM renders the XPM editor with a scrollable viewport
 func (m Model) viewEditXPM() string {
 	if m.editingXPM == nil {
 		return "No XPM data"
 	}
 
-	var b strings.Builder
-
-	// Header
-	b.WriteString(titleStyle.Render(fmt.Sprintf("Edit %s", m.editingXPMType)))
-	b.WriteString("\n\n")
+	var content strings.Builder
 
 	// XPM Info
-	b.WriteString(fmt.Sprintf("Size: %dx%d, Colors: %d, Chars/pixel: %d\n\n",
+	content.WriteString(fmt.Sprintf("Size: %dx%d, Colors: %d, Chars/pixel: %d\n\n",
 		m.editingXPM.Width, m.editingXPM.Height, m.editingXPM.Colors, m.editingXPM.CharsPerPixel))
 
 	// Color Palette
-	b.WriteString(selectedStyle.Render("Color Palette"))
-	b.WriteString(" (↑/↓ to navigate, Enter to edit)\n\n")
+	content.WriteString(selectedStyle.Render("Color Palette"))
+	content.WriteString("\n\n")
 
 	// Convert map to sorted slice for consistent ordering
 	type colorEntry struct {
@@ -389,28 +385,56 @@ func (m Model) viewEditXPM() string {
 		line := fmt.Sprintf("%s%s → %s", prefix, entry.char, colorDisplay)
 
 		if i == m.xpmColorIdx {
-			b.WriteString(selectedStyle.Render(line))
+			content.WriteString(selectedStyle.Render(line))
 		} else {
-			b.WriteString(line)
+			content.WriteString(line)
 		}
-		b.WriteString("\n")
+		content.WriteString("\n")
 	}
 
+	content.WriteString("\n")
+
+	// Pixel preview with colors
+	content.WriteString(selectedStyle.Render("Icon Preview"))
+	content.WriteString("\n")
+
+	// Render all rows of the XPM with colors
+	for i := 0; i < len(m.editingXPM.Data); i++ {
+		content.WriteString("  ")
+		row := m.editingXPM.Data[i]
+
+		// Process each character/pixel in the row
+		for _, char := range row {
+			charStr := string(char)
+
+			// Look up the color for this character
+			if color, ok := m.editingXPM.Palette[charStr]; ok {
+				content.WriteString(renderPixelWithColor(color.Hex, charStr))
+			} else {
+				// Unknown character, show as gray
+				content.WriteString(renderPixelWithColor("#808080", charStr))
+			}
+		}
+
+		// Reset color at end of line
+		content.WriteString("\x1b[0m\n")
+	}
+
+	// Build the final view
+	var b strings.Builder
+
+	// Header (fixed, not scrollable)
+	b.WriteString(titleStyle.Render(fmt.Sprintf("Edit %s", m.editingXPMType)))
+	b.WriteString("\n\n")
+
+	// Update viewport content and render
+	// Note: We need to create a mutable copy to call SetContent
+	viewport := m.xpmViewport
+	viewport.SetContent(content.String())
+	b.WriteString(viewport.View())
 	b.WriteString("\n")
 
-	// Pixel preview (show first few rows)
-	b.WriteString(selectedStyle.Render("Pixel Data"))
-	b.WriteString(fmt.Sprintf(" (showing first %d rows)\n", min(10, len(m.editingXPM.Data))))
-	for i := 0; i < min(10, len(m.editingXPM.Data)); i++ {
-		b.WriteString(fmt.Sprintf("  %s\n", m.editingXPM.Data[i]))
-	}
-	if len(m.editingXPM.Data) > 10 {
-		b.WriteString(fmt.Sprintf("  ... and %d more rows\n", len(m.editingXPM.Data)-10))
-	}
-
-	b.WriteString("\n")
-
-	// Show color input if editing a color
+	// Footer (fixed, not scrollable)
 	if len(m.inputs) > 0 {
 		b.WriteString(selectedStyle.Render("Edit Color:"))
 		b.WriteString("\n")
@@ -418,7 +442,7 @@ func (m Model) viewEditXPM() string {
 		b.WriteString("\n\n")
 		b.WriteString(helpStyle.Render("[Enter] Save Color  [Esc] Cancel"))
 	} else {
-		b.WriteString(helpStyle.Render("[↑/↓] Navigate  [Enter] Edit Color  [Esc] Back  [Ctrl+S] Save"))
+		b.WriteString(helpStyle.Render("[↑/↓/PgUp/PgDn] Scroll  [Tab] Navigate Colors  [Enter] Edit  [Esc] Back  [Ctrl+S] Save"))
 	}
 
 	return b.String()
@@ -637,7 +661,90 @@ func (m Model) renderXPMInfo(xpm *parser.XPMIcon) string {
 		}
 	}
 
+	// Render the icon preview with colors
+	if len(xpm.Data) > 0 {
+		b.WriteString("\n  Icon Preview:\n")
+		b.WriteString(renderXPMPreview(xpm))
+	}
+
 	return b.String()
+}
+
+// renderXPMPreview renders the XPM pixel data with colors applied
+func renderXPMPreview(xpm *parser.XPMIcon) string {
+	var b strings.Builder
+
+	maxRows := 10 // Show up to 10 rows
+	rowsToShow := min(len(xpm.Data), maxRows)
+
+	for i := 0; i < rowsToShow; i++ {
+		b.WriteString("  ")
+		row := xpm.Data[i]
+
+		// Process each character/pixel in the row
+		for _, char := range row {
+			charStr := string(char)
+
+			// Look up the color for this character
+			if color, ok := xpm.Palette[charStr]; ok {
+				b.WriteString(renderPixelWithColor(color.Hex, charStr))
+			} else {
+				// Unknown character, show as gray
+				b.WriteString(renderPixelWithColor("#808080", charStr))
+			}
+		}
+
+		// Reset color at end of line
+		b.WriteString("\x1b[0m\n")
+	}
+
+	if len(xpm.Data) > maxRows {
+		b.WriteString(fmt.Sprintf("  ... and %d more rows\n", len(xpm.Data)-maxRows))
+	}
+
+	return b.String()
+}
+
+// renderPixelWithColor renders a single pixel with the given color as background and the marker character
+func renderPixelWithColor(hexColor string, char string) string {
+	// Handle transparent/none colors
+	if hexColor == "" || hexColor == "none" || hexColor == "transparent" {
+		// Use a light gray background with the character in black
+		return fmt.Sprintf("\x1b[48;2;240;240;240m\x1b[38;2;0;0;0m%s\x1b[0m", char)
+	}
+
+	// Parse hex color
+	hex := strings.TrimPrefix(hexColor, "#")
+	if len(hex) != 6 {
+		// Invalid color, use gray with black text
+		return fmt.Sprintf("\x1b[48;2;128;128;128m\x1b[38;2;0;0;0m%s\x1b[0m", char)
+	}
+
+	// Convert hex to RGB
+	r, err1 := strconv.ParseInt(hex[0:2], 16, 64)
+	g, err2 := strconv.ParseInt(hex[2:4], 16, 64)
+	b, err3 := strconv.ParseInt(hex[4:6], 16, 64)
+
+	if err1 != nil || err2 != nil || err3 != nil {
+		// Parse error, use gray with black text
+		return fmt.Sprintf("\x1b[48;2;128;128;128m\x1b[38;2;0;0;0m%s\x1b[0m", char)
+	}
+
+	// Calculate luminance using the relative luminance formula
+	// Y = 0.299*R + 0.587*G + 0.114*B
+	luminance := float64(r)*0.299 + float64(g)*0.587 + float64(b)*0.114
+
+	// Choose foreground color based on luminance
+	// If luminance > 128, use black text; otherwise use white text
+	var fgR, fgG, fgB int64
+	if luminance > 128 {
+		fgR, fgG, fgB = 0, 0, 0 // Black
+	} else {
+		fgR, fgG, fgB = 255, 255, 255 // White
+	}
+
+	// Create ANSI 24-bit background and foreground color with the character
+	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm\x1b[38;2;%d;%d;%dm%s\x1b[0m", r, g, b, fgR, fgG, fgB, char)
 }
 
 // renderColorWithPreview renders a color hex code with a visual preview using ANSI codes
