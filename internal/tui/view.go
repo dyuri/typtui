@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -373,6 +374,11 @@ func (m Model) viewEditXPM() string {
 		colors = append(colors, colorEntry{char, color})
 	}
 
+	// Sort alphabetically by character
+	sort.Slice(colors, func(i, j int) bool {
+		return colors[i].char < colors[j].char
+	})
+
 	for i, entry := range colors {
 		prefix := "  "
 		if i == m.xpmColorIdx {
@@ -609,9 +615,25 @@ func (m Model) renderXPMInfo(xpm *parser.XPMIcon) string {
 
 	if len(xpm.Palette) > 0 {
 		b.WriteString("  Color Palette:\n")
+
+		// Convert to sorted slice for consistent ordering
+		type colorEntry struct {
+			char  string
+			color parser.Color
+		}
+		var colors []colorEntry
 		for char, color := range xpm.Palette {
-			colorDisplay := renderColorWithPreview(color.Hex)
-			b.WriteString(fmt.Sprintf("    %s → %s\n", char, colorDisplay))
+			colors = append(colors, colorEntry{char, color})
+		}
+
+		// Sort alphabetically by character
+		sort.Slice(colors, func(i, j int) bool {
+			return colors[i].char < colors[j].char
+		})
+
+		for _, entry := range colors {
+			colorDisplay := renderColorWithPreview(entry.color.Hex)
+			b.WriteString(fmt.Sprintf("    %s → %s\n", entry.char, colorDisplay))
 		}
 	}
 

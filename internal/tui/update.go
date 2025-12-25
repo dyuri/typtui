@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -397,15 +398,27 @@ func (m Model) handleXPMEditKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 
 			// Find and update the color at xpmColorIdx
-			i := 0
-			for char := range m.editingXPM.Palette {
-				if i == m.xpmColorIdx {
-					color := m.editingXPM.Palette[char]
-					color.Hex = newColor
-					m.editingXPM.Palette[char] = color
-					break
-				}
-				i++
+			// Convert to sorted slice for consistent ordering
+			type colorEntry struct {
+				char  string
+				color parser.Color
+			}
+			var colors []colorEntry
+			for char, color := range m.editingXPM.Palette {
+				colors = append(colors, colorEntry{char, color})
+			}
+
+			// Sort alphabetically by character (same as in view)
+			sort.Slice(colors, func(i, j int) bool {
+				return colors[i].char < colors[j].char
+			})
+
+			// Update the selected color
+			if m.xpmColorIdx < len(colors) {
+				selectedChar := colors[m.xpmColorIdx].char
+				color := m.editingXPM.Palette[selectedChar]
+				color.Hex = newColor
+				m.editingXPM.Palette[selectedChar] = color
 			}
 
 			m.inputs = nil
@@ -469,27 +482,35 @@ func (m Model) enterColorEdit() (tea.Model, tea.Cmd) {
 	}
 
 	// Get the color at the current index
-	// Since maps don't have order, we need to iterate
-	i := 0
-	var selectedChar string
-	var selectedColor parser.Color
-	for char, color := range m.editingXPM.Palette {
-		if i == m.xpmColorIdx {
-			selectedChar = char
-			selectedColor = color
-			break
-		}
-		i++
+	// Convert to sorted slice for consistent ordering
+	type colorEntry struct {
+		char  string
+		color parser.Color
 	}
+	var colors []colorEntry
+	for char, color := range m.editingXPM.Palette {
+		colors = append(colors, colorEntry{char, color})
+	}
+
+	// Sort alphabetically by character (same as in view)
+	sort.Slice(colors, func(i, j int) bool {
+		return colors[i].char < colors[j].char
+	})
+
+	// Get the selected color
+	if m.xpmColorIdx >= len(colors) {
+		return m, nil
+	}
+	selectedEntry := colors[m.xpmColorIdx]
 
 	// Create a single text input for the color
 	input := textinput.New()
 	input.Placeholder = "#RRGGBB"
 	input.CharLimit = 7
 	input.Width = 30
-	input.SetValue(selectedColor.Hex)
+	input.SetValue(selectedEntry.color.Hex)
 	input.Focus()
-	input.Prompt = fmt.Sprintf("Color for '%s': ", selectedChar)
+	input.Prompt = fmt.Sprintf("Color for '%s': ", selectedEntry.char)
 
 	m.inputs = []textinput.Model{input}
 	m.focusedField = 0
